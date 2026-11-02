@@ -1,0 +1,52 @@
+QUERY 1: Clean and deduplicate the earthquake data
+
+CREATE OR REPLACE TABLE `CLEAN_EARTHQUAKES` AS
+WITH parsed_data AS (
+  SELECT
+    TRIM(id) AS id,
+    SAFE_CAST(NULLIF(TRIM(time), '') AS TIMESTAMP) AS event_time,
+    SAFE_CAST(NULLIF(TRIM(latitude), '') AS FLOAT64) AS latitude,
+    SAFE_CAST(NULLIF(TRIM(longitude), '') AS FLOAT64) AS longitude,
+    SAFE_CAST(NULLIF(TRIM(depth), '') AS FLOAT64) AS depth_km,
+    SAFE_CAST(NULLIF(TRIM(mag), '') AS FLOAT64) AS magnitude,
+    TRIM(magType) AS magnitude_type,
+    TRIM(place) AS place,
+    TRIM(type) AS earthquake_type,
+    TRIM(status) AS status,
+    SAFE_CAST(NULLIF(TRIM(updated), '') AS TIMESTAMP) AS updated_time
+  FROM `data`
+),
+deduplicated AS (
+  SELECT *
+  FROM parsed_data
+  WHERE id IS NOT NULL
+    AND id != ''
+    AND event_time IS NOT NULL
+  QUALIFY ROW_NUMBER() OVER (
+    PARTITION BY id
+    ORDER BY updated_time DESC
+  ) = 1
+)
+SELECT
+  id,
+  event_time,
+  DATE(event_time) AS event_date,
+  latitude,
+  longitude,
+  depth_km,
+  magnitude,
+  magnitude_type,
+  place,
+  earthquake_type,
+  status,
+  CASE
+    WHEN magnitude IS NULL THEN 'Unknown'
+    WHEN magnitude < 2.0 THEN 'Minor'
+    WHEN magnitude < 4.0 THEN 'Light'
+    WHEN magnitude < 5.0 THEN 'Moderate'
+    WHEN magnitude < 6.0 THEN 'Strong'
+    WHEN magnitude < 7.0 THEN 'Major'
+    ELSE 'Great'
+  END AS magnitude_category,
+  updated_time
+FROM deduplicated;

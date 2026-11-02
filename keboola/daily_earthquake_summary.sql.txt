@@ -1,0 +1,16 @@
+QUERY 2: Create daily earthquake summaries
+
+CREATE OR REPLACE TABLE `DAILY_EARTHQUAKE_SUMMARY` AS
+SELECT
+  event_date AS date,
+  COUNT(*) AS total_earthquakes,
+  ROUND(AVG(magnitude), 2) AS average_magnitude,
+  MAX(magnitude) AS maximum_magnitude,
+  MIN(magnitude) AS minimum_magnitude,
+  COUNTIF(magnitude >= 4.0) AS earthquakes_magnitude_4_plus,
+  COUNTIF(magnitude >= 5.0) AS earthquakes_magnitude_5_plus,
+  ROUND(AVG(depth_km), 2) AS average_depth_km,
+  COUNT(DISTINCT place) AS distinct_locations
+FROM `CLEAN_EARTHQUAKES`
+GROUP BY event_date;
+
